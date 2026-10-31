@@ -1,7 +1,6 @@
 'use client';
 
 import { Fragment, useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
 import useProfile from './useProfile';
 import seed from '../data/portfolio.json';
 import { emailHref, whatsappHref } from '../lib/profile.mjs';
@@ -22,7 +21,7 @@ export default function Portfolio({ preview = false }) {
   const dialog = useRef(null);
   const scope = useRef(null);
 
-  useEffect(() => { setYear(new Date().getFullYear()); }, []);
+  useEffect(() => { setYear(new Date().getFullYear()); if (location.hash) history.replaceState(null, '', location.pathname + location.search); }, []);
   useEffect(() => {
     if (!preview) return;
     function receive(event) {
@@ -73,9 +72,19 @@ export default function Portfolio({ preview = false }) {
   const gallery = data.gallery || [];
   const certificates = data.certificates || [];
   const photo = selectedPhoto === null ? null : gallery[selectedPhoto];
+  function navigateSection(event) {
+    const link = event.target.closest('a[href^="#"]');
+    if (!link || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const target = document.getElementById(link.getAttribute('href').slice(1));
+    if (!target) return;
+    event.preventDefault();
+    target.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
+    if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+    target.focus({ preventScroll: true });
+  }
   function closeMenu() { setMenuOpen(false); }
 
-  return <div ref={scope} className={'portfolio-site' + (motion ? ' motion' : '')}>
+  return <div ref={scope} onClick={navigateSection} className={'portfolio-site' + (motion ? ' motion' : '')}>
     <div className="ambient ambient-one" aria-hidden="true" /><div className="ambient ambient-two" aria-hidden="true" />
     <div className="progress" style={{ width: progress + '%' }} aria-hidden="true" />
     <a className="skip" href="#utama">Langsung ke konten</a>
@@ -98,10 +107,10 @@ export default function Portfolio({ preview = false }) {
 
       <section id="galeri" className="wrap"><div className="section-head reveal"><div><div className="eyebrow">03 / A visual diary</div><h2>Momen yang tersimpan.<br /><em>Cerita yang bertumbuh.</em></h2></div><p>Dokumentasi kegiatan dan potongan perjalanan yang ingin saya kenang.</p></div><div className="gallery-grid">{gallery.map((item, index) => <article className="gallery-item glass reveal" key={item.id || index}>{item.image ? <button className="gallery-open" onClick={() => setSelectedPhoto(index)} aria-label={'Lihat foto: ' + (item.caption || 'Dokumentasi ' + (index + 1))}><img src={item.image} alt={item.caption || 'Dokumentasi kegiatan'} loading="lazy" /><span aria-hidden="true">↗</span></button> : <ImagePlaceholder number={String(index + 1).padStart(2, '0')} />}<div className="gallery-copy"><small>MOMENT / {String(index + 1).padStart(2, '0')}</small><h3>{item.caption || 'Sebuah momen'}</h3>{item.description && <p>{item.description}</p>}{!item.image && <p className="empty-caption">Dokumentasi akan ditambahkan.</p>}</div></article>)}</div>{gallery.length === 0 && <div className="glass empty-state"><span aria-hidden="true">▧</span><h3>Ruang untuk cerita berikutnya.</h3><p>Dokumentasi kegiatan akan hadir di sini.</p></div>}</section>
 
-      <section id="sertifikat" className="section-tinted certificates-section"><div className="wrap"><div className="section-head reveal"><div><div className="eyebrow">04 / Little milestones</div><h2>Terus belajar.<br /><em>Merayakan setiap langkah.</em></h2></div><p>Sertifikat, pelatihan, dan jejak pembelajaran sepanjang perjalanan.</p></div>{certificates.length ? <div className="certificate-grid">{certificates.map((item, index) => <article className="glass certificate-card reveal" key={item.id || index}><div className="certificate-cover">{item.image ? <img src={item.image} alt={item.title || 'Sertifikat'} loading="lazy" /> : <div className="certificate-symbol" aria-hidden="true">✺</div>}<span className="chip">{item.document ? 'PDF / Sertifikat' : 'Sertifikat'}</span></div><div className="certificate-copy"><p className="certificate-meta">{[item.issuer, item.date].filter(Boolean).join(' · ')}</p><h3>{item.title || 'Sertifikat pembelajaran'}</h3>{item.description && <p>{item.description}</p>}<div className="certificate-links">{(item.document || item.image) && <a href={item.document || item.image} target="_blank" rel="noopener noreferrer">Lihat sertifikat ↗</a>}{item.credentialUrl && <a href={item.credentialUrl} target="_blank" rel="noopener noreferrer">Kredensial ↗</a>}</div></div></article>)}</div> : <div className="glass empty-state certificate-empty"><span aria-hidden="true">✺</span><div><h3>Perjalanan belajar masih berlanjut.</h3><p>Sertifikat dan dokumentasi pembelajaran akan ditampilkan di sini.</p></div></div>}</div></section>
+      <section id="sertifikat" className="section-tinted certificates-section"><div className="wrap"><div className="section-head reveal"><div><div className="eyebrow">04 / Little milestones</div><h2>Terus belajar.<br /><em>Merayakan setiap langkah.</em></h2></div><p>Sertifikat, pelatihan, dan jejak pembelajaran sepanjang perjalanan.</p></div>{certificates.length ? <div className="certificate-grid">{certificates.map((item, index) => <article className="glass certificate-card reveal" key={item.id || index}><div className="certificate-cover">{item.image ? <img src={item.image} alt={item.title || 'Sertifikat'} loading="lazy" /> : <div className="certificate-symbol" aria-hidden="true">✺</div>}<span className="chip">{item.document ? 'PDF / Sertifikat' : 'Sertifikat'}</span></div><div className="certificate-copy"><p className="certificate-meta">{[item.issuer, item.date].filter(Boolean).join(' · ')}</p><h3>{item.title || 'Sertifikat pembelajaran'}</h3>{item.description && <p>{item.description}</p>}<div className="certificate-links">{(item.document || item.image) && <a href={item.document || item.image} target="_blank" rel="noopener noreferrer">{item.document ? 'Buka PDF ↗' : 'Lihat sertifikat ↗'}</a>}{item.document && item.image && <a href={item.image} target="_blank" rel="noopener noreferrer">Lihat gambar ↗</a>}{item.credentialUrl && <a href={item.credentialUrl} target="_blank" rel="noopener noreferrer">Kredensial ↗</a>}</div></div></article>)}</div> : <div className="glass empty-state certificate-empty"><span aria-hidden="true">✺</span><div><h3>Perjalanan belajar masih berlanjut.</h3><p>Sertifikat dan dokumentasi pembelajaran akan ditampilkan di sini.</p></div></div>}</div></section>
 
       <section id="kontak" className="wrap"><div className="glass contact reveal"><div><div className="eyebrow">05 / Let's connect</div><h2>Setiap cerita baru<br />dimulai dari <em>halo.</em></h2><p>Untuk peluang kerja, kolaborasi, atau bertukar cerita.</p></div><div className="contact-actions">{email && <a className="email-link" href={email}>{data.email}</a>}{whatsapp && <a className="button primary" href={whatsapp} target="_blank" rel="noopener noreferrer">Mari berbincang <span aria-hidden="true">↗</span></a>}</div><span className="contact-flower" aria-hidden="true">✧</span></div></section>
-    </main><footer className="wrap footer"><span>© {year} {data.name}</span><div>{!preview && <Link href="/dashboard/">Masuk studio ↗</Link>}<a href="#utama">Kembali ke atas ↑</a></div></footer>
+    </main><footer className="wrap footer"><span>© {year} {data.name}</span><div><a href="#utama">Kembali ke atas ↑</a></div></footer>
     <dialog className="photo-dialog" ref={dialog} onCancel={() => setSelectedPhoto(null)} onClose={() => setSelectedPhoto(null)} onClick={event => { if (event.target === event.currentTarget) setSelectedPhoto(null); }} aria-label={photo?.caption || 'Detail foto'}>{photo && <div className="photo-dialog-content"><button className="dialog-close" onClick={() => setSelectedPhoto(null)} aria-label="Tutup foto">✕</button><img src={photo.image} alt={photo.caption || 'Dokumentasi kegiatan'} /><div><small>THE VISUAL DIARY</small><h3>{photo.caption}</h3>{photo.description && <p>{photo.description}</p>}</div></div>}</dialog>
   </div>;
 }
