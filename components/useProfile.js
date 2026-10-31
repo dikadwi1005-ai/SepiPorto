@@ -45,7 +45,16 @@ export default function useProfile({ persist = false, livePreview = false } = {}
             if (conflict) localStorage.setItem(RECOVERY_KEY, JSON.stringify(draft.data));
           } else {
             const legacy = localStorage.getItem(STORAGE_KEY);
-            if (legacy) initial = sanitizeProfile(JSON.parse(legacy), seed);
+            if (legacy) {
+              const legacyData = sanitizeProfile(JSON.parse(legacy), seed);
+              if (remote.version === null) initial = legacyData;
+              else if (JSON.stringify(legacyData) !== JSON.stringify(remote.data)) {
+                // Old drafts have no server version: preserve them for recovery, never
+                // silently bless them with the latest version and overwrite newer media.
+                localStorage.setItem(RECOVERY_KEY, JSON.stringify(legacyData));
+                conflict = true;
+              }
+            }
           }
         }
         version.current = remote.version;
