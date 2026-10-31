@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useRef, useState } from 'react';
 import useProfile from './useProfile';
+import { sectionAtViewport } from '../lib/navigation.mjs';
 import seed from '../data/portfolio.json';
 import { emailHref, whatsappHref } from '../lib/profile.mjs';
 
@@ -20,6 +21,7 @@ export default function Portfolio({ preview = false }) {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const dialog = useRef(null);
   const scope = useRef(null);
+  const navigationIntent = useRef(null);
 
   useEffect(() => { setYear(new Date().getFullYear()); if (location.hash) history.replaceState(null, '', location.pathname + location.search); }, []);
   useEffect(() => {
@@ -77,18 +79,43 @@ export default function Portfolio({ preview = false }) {
     const target = document.getElementById(link.getAttribute('href').slice(1));
     if (!target) return;
     event.preventDefault();
+    navigationIntent.current = target.id;
     setActiveSection(target.id);
     target.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
     if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
     target.focus({ preventScroll: true });
   }
   useEffect(() => {
-    const observer = new IntersectionObserver(entries => {
-      const visible = entries.filter(entry => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio);
-      if (visible[0]) setActiveSection(visible[0].target.id === 'featured' ? 'utama' : visible[0].target.id);
-    }, { rootMargin: '-10% 0px -55% 0px', threshold: [0, .1, .5] });
-    document.querySelectorAll('#utama .hero, #tentang, #pengalaman, #galeri, #sertifikat').forEach(element => observer.observe(element));
-    return () => observer.disconnect();
+    let frame;
+    const update = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        if (navigationIntent.current) return;
+        const positions = sections.map(([id]) => ({ id, top: document.getElementById(id)?.getBoundingClientRect().top ?? Infinity }));
+        setActiveSection(sectionAtViewport(positions, innerHeight));
+      });
+    };
+    const finish = () => { navigationIntent.current = null; };
+    const interrupt = () => { finish(); update(); };
+    const keyInterrupt = event => {
+      if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) interrupt();
+    };
+    update();
+    addEventListener('scroll', update, { passive: true });
+    addEventListener('resize', update);
+    addEventListener('scrollend', finish);
+    addEventListener('wheel', interrupt, { passive: true });
+    addEventListener('touchstart', interrupt, { passive: true });
+    addEventListener('keydown', keyInterrupt);
+    return () => {
+      cancelAnimationFrame(frame);
+      removeEventListener('scroll', update);
+      removeEventListener('resize', update);
+      removeEventListener('scrollend', finish);
+      removeEventListener('wheel', interrupt);
+      removeEventListener('touchstart', interrupt);
+      removeEventListener('keydown', keyInterrupt);
+    };
   }, []);
 
   return <div ref={scope} onClick={navigateSection} className={'portfolio-site' + (motion ? ' motion' : '')}>
