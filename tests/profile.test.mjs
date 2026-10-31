@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { sanitizeProfile, safeImage, emailHref, whatsappHref, STORAGE_KEY } from '../lib/profile.mjs';
+import { sanitizeProfile, safeImage, safeAsset, safeLink, emailHref, whatsappHref, STORAGE_KEY } from '../lib/profile.mjs';
 
 const seed = JSON.parse(readFileSync(new URL('../data/portfolio.json', import.meta.url), 'utf8'));
 
@@ -11,7 +11,7 @@ test('Existing dashboard backups retain profile text and images', () => {
   assert.equal(result.name, draft.name);
   assert.equal(result.portrait, draft.portrait);
   assert.equal(result.gallery[0].caption, 'Dokumentasi magang');
-  assert.equal(result.gallery.length, 3);
+  assert.equal(result.gallery.length, 1);
   assert.equal(STORAGE_KEY, 'sherlynda-portfolio-v2');
   assert.equal(seed.name, 'Sherlynda Puspita Sari');
 });
@@ -45,4 +45,25 @@ test('Static export supports custom-domain root and GitHub project subpaths', as
     assert.equal(project.basePath, '/portofoliosherly');
     assert.equal(project.trailingSlash, true);
   } finally { if (previous === undefined) delete process.env.NEXT_PUBLIC_BASE_PATH; else process.env.NEXT_PUBLIC_BASE_PATH = previous; }
+});
+
+test('Gallery keeps multiple photos and descriptions instead of padding or truncating to three', () => {
+  const draft = { ...seed, gallery: Array.from({ length: 12 }, (_, i) => ({ id: 'photo-' + i, caption: 'Momen ' + i, description: 'Cerita di balik foto ' + i, image: 'data:image/jpeg;base64,YWJj' })) };
+  const restored = sanitizeProfile(JSON.parse(JSON.stringify(draft)), seed);
+  assert.equal(restored.gallery.length, 12);
+  assert.equal(restored.gallery[11].description, 'Cerita di balik foto 11');
+  assert.equal(restored.gallery[11].id, 'photo-11');
+  assert.equal(sanitizeProfile({ ...seed, gallery: [] }, seed).gallery.length, 0);
+  assert.equal(sanitizeProfile({ ...draft, gallery: Array(120).fill(draft.gallery[0]) }, seed).gallery.length, 100);
+});
+
+test('Certificates retain metadata and public documents while rejecting unsafe links', () => {
+  const url = 'https://ocgmtnoyvzslgkhgxrzk.supabase.co/storage/v1/object/public/portfolio-media/admin/certificate.pdf';
+  const result = sanitizeProfile({ ...seed, certificates: [{ title: 'Pelatihan', issuer: 'Penyelenggara', date: '2026', description: 'Deskripsi sertifikat', document: url, credentialUrl: 'javascript:alert(1)' }] }, seed);
+  assert.equal(result.certificates[0].document, url);
+  assert.equal(result.certificates[0].description, 'Deskripsi sertifikat');
+  assert.equal(result.certificates[0].credentialUrl, '');
+  assert.equal(safeAsset('https://other.example/file.pdf'), '');
+  assert.equal(safeLink('https://user:secret@example.com'), '');
+  assert.equal(safeLink('https://example.com/credential'), 'https://example.com/credential');
 });
