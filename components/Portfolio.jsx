@@ -3,98 +3,60 @@
 import { useEffect, useRef, useState } from 'react';
 import useProfile from './useProfile';
 import useGlassMotion from './useGlassMotion';
+import { Daisy, GardenSprig, Butterfly } from './FlowerArt';
+import { sectionAtViewport } from '../lib/navigation.mjs';
 import { emailHref, whatsappHref } from '../lib/profile.mjs';
 
-const rooms = [
-  { id: 'profil', label: 'Profil', note: 'Tentang Sherlynda', x: 49, y: 27 },
-  { id: 'pengalaman', label: 'Pengalaman', note: 'Magang & organisasi', x: 23, y: 48 },
-  { id: 'galeri', label: 'Galeri', note: 'Dokumentasi kegiatan', x: 73, y: 53 },
-  { id: 'sertifikat', label: 'Sertifikat', note: 'Arsip pembelajaran', x: 36, y: 76 },
-  { id: 'kontak', label: 'Kontak', note: 'Mulai percakapan', x: 78, y: 82 },
-];
+const chapters = [['kenalan', 'Kenalan'], ['perjalanan', 'Perjalanan'], ['album', 'Album'], ['sertifikat', 'Sertifikat'], ['sapa', 'Sapa']];
 
-function RoomIcon({ type }) {
-  const paths = {
-    profil: <><circle cx="12" cy="8" r="3.5" /><path d="M5 21v-2a7 7 0 0 1 14 0v2" /></>,
-    pengalaman: <><rect x="3" y="7" width="18" height="14" rx="2" /><path d="M8 7V4h8v3M3 12l9 4 9-4M12 13v5" /></>,
-    galeri: <><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="16" cy="9" r="2" /><path d="m3 17 5-6 6 7 3-3 4 4" /></>,
-    sertifikat: <><path d="M14 3H5v18h14V8zM14 3v5h5" /><path d="M8 11h3M8 15h8M8 18h5" /></>,
-    kontak: <><rect x="2" y="5" width="20" height="14" rx="2" /><path d="m2 6 10 8L22 6" /></>,
-  };
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[type]}</svg>;
+function ChapterTitle({ number, children, note }) {
+  return <div className="journal-chapter-title"><span className="journal-index">{number} / {note}</span><h2>{children}</h2></div>;
 }
 
-function WorldMap({ active, select, name }) {
-  const current = rooms.find(room => room.id === active);
-  return <aside className="world-map" aria-label="Peta portofolio">
-    <div className="map-heading"><span>PORTOFOLIO / JELAJAH</span><span className="map-coordinate">01—05</span></div>
-    <div className="map-title"><h2>Ruang<br /><span>{name}.</span></h2><p>Pilih ruang untuk<br />mengenal ceritaku.</p></div>
-    <div className="map-stage">
-      <div className="map-floor" aria-hidden="true"><i /><i /><i /><i /></div>
-      <svg className="map-routes" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M49 27 23 48 36 76 78 82 73 53 49 27M23 48 73 53 36 76" /><path className="route-flow" d="M49 27 23 48 36 76 78 82 73 53 49 27" /></svg>
-      {rooms.map((room, index) => <button key={room.id} type="button" className={'map-node' + (active === room.id ? ' selected' : '')}
-        style={{ '--node-x': room.x + '%', '--node-y': room.y + '%', '--float-delay': index * -.8 + 's' }}
-        aria-pressed={active === room.id} onClick={() => select(room.id)}>
-        <span className="node-platform"><RoomIcon type={room.id} /><span className="node-number">0{index + 1}</span></span>
-        <span className="node-label">{room.label}</span>
-      </button>)}
-    </div>
-    <div className="map-caption" aria-live="polite"><span className="map-indicator" /><div><small>RUANG TERPILIH</small><strong>{current.label}</strong></div><span aria-hidden="true">↗</span></div>
-  </aside>;
-}
-
-function ProfileRoom({ data }) {
-  return <div className="room-profile">
-    <figure className="character-photo" data-glass-tilt>{data.portrait ? <img src={data.portrait} alt={'Foto ' + data.name} fetchPriority="high" /> : <div className="character-placeholder">{data.shortName?.[0]}</div>}<figcaption>{data.degree}</figcaption></figure>
-    <div className="character-intro"><span className="room-tag">Fresh graduate</span><p className="room-lead">{data.intro}</p><dl><div><dt>Pendidikan</dt><dd>{data.degree}</dd></div><div><dt>Universitas</dt><dd>{data.university}</dd></div></dl></div>
-    <div className="character-story"><h2>Tentang saya</h2><p>{data.bio}</p>{data.headline && <span className="profile-motto">{data.headline.split('\n').join(' / ')}</span>}</div>
-  </div>;
-}
-
-function ExperienceRoom({ data }) {
-  return <div className="room-experience"><div className="experience-period"><span>01 / MAGANG</span><span>{data.period || 'Kabupaten Malang'}</span></div><h2>{data.company}</h2><p className="experience-role">{data.role}</p><p className="room-body">{data.experience}</p>{data.experiencePhoto && <figure className="experience-photo"><img src={data.experiencePhoto} alt="Dokumentasi magang" loading="lazy" /><figcaption>{data.company}</figcaption></figure>}{data.organization.trim() && <section className="organization-story"><span className="room-eyebrow">02 / ORGANISASI</span><h2>{data.organization}</h2><p className="room-body">{data.organizationDetail}</p></section>}</div>;
-}
-
-function GalleryRoom({ items, open }) {
-  const photos = items.map((item, index) => ({ ...item, index })).filter(item => item.image);
-  return photos.length ? <div className="room-gallery">{photos.map((item, index) => <figure key={item.id || item.index} className="gallery-memory" style={{ '--entry-delay': Math.min(index, 5) * 70 + 'ms' }}><button type="button" onClick={() => open(item.index)} aria-label={'Lihat foto: ' + (item.caption || 'Dokumentasi')}><img src={item.image} alt={item.caption || 'Dokumentasi kegiatan'} loading="lazy" /><span aria-hidden="true">↗</span></button><figcaption><small>FRAME / {String(index + 1).padStart(2, '0')}</small><h2>{item.caption || 'Dokumentasi kegiatan'}</h2>{item.description && <p>{item.description}</p>}</figcaption></figure>)}</div> : <EmptyRoom type="galeri">Dokumentasi kegiatan belum ditambahkan.</EmptyRoom>;
-}
-
-function EmptyRoom({ type, children }) {
-  return <div className="room-empty"><RoomIcon type={type} /><p>{children}</p></div>;
-}
-
-function CertificateRoom({ items }) {
-  return items.length ? <div className="room-archive">{items.map((item, index) => <article key={item.id || index} className="archive-record"><span className="archive-index">{String(index + 1).padStart(2, '0')}</span>{item.image && <img src={item.image} alt={item.title || 'Sertifikat'} loading="lazy" />}<div><h2>{item.title || 'Sertifikat'}</h2><p className="archive-meta">{[item.issuer, item.date].filter(Boolean).join(' / ')}</p>{item.description && <p className="room-body">{item.description}</p>}<div className="archive-links">{item.document && <a href={item.document} target="_blank" rel="noopener noreferrer">Buka PDF ↗</a>}{item.image && <a href={item.image} target="_blank" rel="noopener noreferrer">Lihat gambar ↗</a>}{item.credentialUrl && <a href={item.credentialUrl} target="_blank" rel="noopener noreferrer">Kredensial ↗</a>}</div></div></article>)}</div> : <EmptyRoom type="sertifikat">Sertifikat belum ditambahkan.</EmptyRoom>;
-}
-
-function ContactRoom({ data }) {
-  const email = emailHref(data.email), whatsapp = whatsappHref(data.phone);
-  return <div className="room-contact"><div className="contact-emblem" aria-hidden="true"><RoomIcon type="kontak" /></div><h2>Mari berbincang.</h2><p>Untuk peluang kerja, kolaborasi,<br />atau percakapan baru.</p><div className="contact-destinations">{email && <a href={email}><span><small>EMAIL</small>{data.email}</span><span aria-hidden="true">↗</span></a>}{whatsapp && <a href={whatsapp} target="_blank" rel="noopener noreferrer"><span><small>WHATSAPP</small>{data.phone}</span><span aria-hidden="true">↗</span></a>}</div></div>;
+function Certificate({ item, index }) {
+  return <article className="journal-certificate"><span className="certificate-number">{String(index + 1).padStart(2, '0')}</span>{item.image && <a className="certificate-preview" href={item.image} target="_blank" rel="noopener noreferrer"><img src={item.image} alt={item.title || 'Sertifikat'} loading="lazy" /></a>}<div className="certificate-details"><h3>{item.title || 'Sertifikat'}</h3><p className="certificate-meta">{[item.issuer, item.date].filter(Boolean).join(' · ')}</p>{item.description && <p>{item.description}</p>}<div className="certificate-actions">{item.document && <a href={item.document} target="_blank" rel="noopener noreferrer">Buka PDF ↗</a>}{item.image && <a href={item.image} target="_blank" rel="noopener noreferrer">Lihat gambar ↗</a>}{item.credentialUrl && <a href={item.credentialUrl} target="_blank" rel="noopener noreferrer">Kredensial ↗</a>}</div></div></article>;
 }
 
 export default function Portfolio({ preview = false }) {
   const { data, replaceData } = useProfile({ livePreview: preview });
-  const [active, setActive] = useState('profil');
+  const [active, setActive] = useState('kenalan');
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [year, setYear] = useState(2026);
-  const scope = useRef(null), detail = useRef(null), dialog = useRef(null);
+  const scope = useRef(null), dialog = useRef(null), intent = useRef(null);
   useGlassMotion(scope, true);
-  const roomIndex = rooms.findIndex(room => room.id === active);
-  const room = rooms[roomIndex];
   const gallery = data.gallery || [];
+  const photos = gallery.map((item, index) => ({ ...item, index })).filter(item => item.image);
+  const certificates = data.certificates || [];
   const photo = selectedPhoto === null ? null : gallery[selectedPhoto];
+  const email = emailHref(data.email), whatsapp = whatsappHref(data.phone);
 
   useEffect(() => { setYear(new Date().getFullYear()); if (location.hash) history.replaceState(null, '', location.pathname + location.search); }, []);
   useEffect(() => {
     if (!preview) return;
-    const receive = event => {
-      if (event.source === window.parent && event.origin === location.origin && event.data?.type === 'portfolio-preview') replaceData(event.data.data);
-    };
+    const receive = event => { if (event.source === window.parent && event.origin === location.origin && event.data?.type === 'portfolio-preview') replaceData(event.data.data); };
     addEventListener('message', receive);
     window.parent.postMessage({ type: 'portfolio-ready' }, location.origin);
     return () => removeEventListener('message', receive);
   }, [preview, replaceData]);
+  useEffect(() => {
+    let frame;
+    const update = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        if (intent.current) return;
+        const positions = chapters.map(([id]) => ({ id, top: document.getElementById(id)?.getBoundingClientRect().top ?? Infinity }));
+        const current = sectionAtViewport(positions, innerHeight);
+        setActive(current === 'utama' ? 'kenalan' : current);
+      });
+    };
+    const finish = () => { intent.current = null; };
+    const interrupt = () => { finish(); update(); };
+    const key = event => { if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) interrupt(); };
+    update();
+    addEventListener('scroll', update, { passive: true }); addEventListener('resize', interrupt); addEventListener('scrollend', finish);
+    addEventListener('wheel', interrupt, { passive: true }); addEventListener('touchstart', interrupt, { passive: true }); addEventListener('keydown', key);
+    return () => { cancelAnimationFrame(frame); removeEventListener('scroll', update); removeEventListener('resize', interrupt); removeEventListener('scrollend', finish); removeEventListener('wheel', interrupt); removeEventListener('touchstart', interrupt); removeEventListener('keydown', key); };
+  }, []);
   useEffect(() => {
     if (selectedPhoto === null) { if (dialog.current?.open) dialog.current.close(); return; }
     dialog.current?.showModal();
@@ -103,25 +65,38 @@ export default function Portfolio({ preview = false }) {
     return () => { document.body.style.overflow = overflow; };
   }, [selectedPhoto]);
 
-  function selectRoom(id) {
-    setActive(id);
-    if (scrollY > 100 || innerWidth < 900) detail.current?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
+  function navigate(event) {
+    const link = event.target.closest('a[href^="#"]');
+    if (!link || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const id = link.getAttribute('href').slice(1), target = document.getElementById(id);
+    if (!target) return;
+    event.preventDefault(); intent.current = id; setActive(id);
+    target.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
+    if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+    target.focus({ preventScroll: true });
   }
 
-  return <div ref={scope} className="portfolio-world">
-    <div className="world-atmosphere" aria-hidden="true"><i /><i /><div className="world-orbit" /></div>
-    <a href="#room-content" className="world-skip" onClick={event => { event.preventDefault(); detail.current?.focus(); }}>Langsung ke konten</a>
-    <header className="world-header"><button className="world-wordmark" type="button" onClick={() => selectRoom('profil')}><span className="wordmark-mark">s.</span><span>{data.shortName}<small>PORTOFOLIO</small></span></button><span className="world-header-note">Pendidikan · Pengalaman · Dokumentasi</span><button className="world-contact-button" type="button" onClick={() => selectRoom('kontak')}>Hubungi saya <span aria-hidden="true">↗</span></button></header>
-    <div className="world-layout"><WorldMap active={active} select={selectRoom} name={data.shortName} />
-      <main ref={detail} id="room-content" className="world-detail" tabIndex={-1} aria-labelledby="world-room-title">
-        <div className="room-window-bar"><span><i />{room.label}</span><div><button type="button" onClick={() => selectRoom(rooms[(roomIndex + rooms.length - 1) % rooms.length].id)} aria-label="Ruang sebelumnya">←</button><small>0{roomIndex + 1} / 05</small><button type="button" onClick={() => selectRoom(rooms[(roomIndex + 1) % rooms.length].id)} aria-label="Ruang berikutnya">→</button></div></div>
-        <div key={active} className="room-content"><div className="room-title"><span className="room-eyebrow">{room.note}</span><h1 id="world-room-title">{active === 'profil' ? data.name : room.label}<span>.</span></h1></div>
-          {active === 'profil' && <ProfileRoom data={data} />}{active === 'pengalaman' && <ExperienceRoom data={data} />}{active === 'galeri' && <GalleryRoom items={gallery} open={setSelectedPhoto} />}{active === 'sertifikat' && <CertificateRoom items={data.certificates || []} />}{active === 'kontak' && <ContactRoom data={data} />}
-        </div><div className="room-bottom"><span>{data.shortName} / {room.label}</span><span aria-hidden="true">↗</span></div>
-      </main>
-    </div>
-    <nav className="world-mobile-nav" aria-label="Pilih ruang">{rooms.map(room => <button type="button" key={room.id} aria-pressed={active === room.id} onClick={() => selectRoom(room.id)}><RoomIcon type={room.id} /><span>{room.label}</span></button>)}</nav>
-    <footer className="world-footer"><span>© {year} {data.name}</span><span>Portofolio pribadi</span></footer>
-    <dialog className="world-photo-modal" ref={dialog} onCancel={() => setSelectedPhoto(null)} onClose={() => setSelectedPhoto(null)} onClick={event => { if (event.target === event.currentTarget) setSelectedPhoto(null); }} aria-label={photo?.caption || 'Detail foto'}>{photo && <div><button className="photo-modal-close" type="button" onClick={() => setSelectedPhoto(null)}>Tutup ×</button><img src={photo.image} alt={photo.caption || 'Dokumentasi kegiatan'} /><div className="photo-modal-caption"><h2>{photo.caption}</h2>{photo.description && <p>{photo.description}</p>}</div></div>}</dialog>
+  return <div ref={scope} className="garden-journal" onClick={navigate}>
+    <div className="garden-atmosphere" aria-hidden="true"><i /><i /><span className="drifting-petal petal-one" /><span className="drifting-petal petal-two" /><span className="drifting-petal petal-three" /></div>
+    <a className="journal-skip" href="#kenalan">Langsung ke konten</a>
+    <header className="journal-header"><a className="journal-signature" href="#kenalan"><Daisy />{data.shortName}<span>’s journal</span></a><nav aria-label="Navigasi portofolio">{chapters.map(([id, label]) => <a key={id} href={'#' + id} aria-current={active === id ? 'location' : undefined}>{label}</a>)}</nav></header>
+    <main>
+      <section id="kenalan" className="journal-cover journal-wrap">
+        <div className="cover-note"><span>PORTOFOLIO PRIBADI</span><span>Pendidikan · Cerita · Kenangan</span></div>
+        <div className="cover-photo-area"><GardenSprig className="cover-blooms" /><figure className="cover-portrait" data-glass-tilt><div className="portrait-mat">{data.portrait ? <img src={data.portrait} alt={'Foto ' + data.name} fetchPriority="high" /> : <div className="portrait-placeholder">{data.shortName?.[0]}</div>}</div><figcaption>{data.name}<Daisy /></figcaption></figure><Butterfly className="cover-butterfly" /><span className="photo-handnote">senang berkenalan ♡</span></div>
+        <div className="cover-greeting"><span className="greeting-line">Sedikit tentang aku</span><h1>Halo, aku<br /><em>{data.shortName}.</em></h1><p className="full-name">{data.name}</p><div className="greeting-note"><span className="note-pin" aria-hidden="true" /><p>{data.intro}</p><a className="journal-link" href="#perjalanan">Kenali perjalananku <span aria-hidden="true">↓</span></a></div><span className="cover-flower-note">bunga, warna pink, dan cerita kecil.</span></div>
+        <div className="about-note"><span className="journal-index">01 / KENALAN</span><div><p>{data.bio}</p><dl><div><dt>Pendidikan</dt><dd>{data.degree}</dd></div><div><dt>Kampus</dt><dd>{data.university}</dd></div></dl></div><Daisy className="about-daisy" /></div>
+      </section>
+
+      <section id="perjalanan" className="journal-journey journal-wrap journal-section"><ChapterTitle number="02" note="PERJALANAN">Catatan dari<br /><em>ruang belajar.</em></ChapterTitle><div className="journey-layout"><div className="journey-margin"><GardenSprig className="journey-sprig" mirror /><p>{data.headline?.split('\n').join(' / ')}</p></div><div className="journey-entries"><article className="journey-entry"><div className="entry-topline"><span>Pengalaman magang</span><span>{data.period || 'Kabupaten Malang'}</span></div><h3>{data.company}</h3><p className="entry-role">{data.role}</p><p className="entry-story">{data.experience}</p>{data.experiencePhoto && <figure className="journey-photo"><img src={data.experiencePhoto} alt="Dokumentasi magang" loading="lazy" /><figcaption>Sepotong cerita dari masa magang.</figcaption></figure>}</article>{data.organization.trim() && <article className="journey-entry organization-entry"><span className="journal-index">ORGANISASI</span><h3>{data.organization}</h3><p className="entry-story">{data.organizationDetail}</p></article>}</div></div></section>
+
+      <section id="album" className="journal-album journal-wrap journal-section"><div className="album-heading"><ChapterTitle number="03" note="ALBUM">Momen kecil,<br /><em>kenangan manis.</em></ChapterTitle><p>Dokumentasi kegiatan<br />dan cerita di baliknya.</p><Daisy className="album-daisy" /></div>{photos.length ? <div className="album-grid">{photos.map((item, index) => <figure key={item.id || item.index} className="album-photo" style={{ '--photo-angle': index % 2 ? '2deg' : '-2deg', '--photo-delay': index % 3 * -1.2 + 's' }}><button type="button" onClick={() => setSelectedPhoto(item.index)} aria-label={'Lihat foto: ' + (item.caption || 'Dokumentasi kegiatan')}><img src={item.image} alt={item.caption || 'Dokumentasi kegiatan'} loading="lazy" /><span aria-hidden="true">↗</span></button><figcaption><span className="album-number">{String(index + 1).padStart(2, '0')}</span><div><h3>{item.caption || 'Dokumentasi kegiatan'}</h3>{item.description && <p>{item.description}</p>}</div></figcaption></figure>)}</div> : <div className="journal-empty"><Daisy /><p>Album ini sedang menunggu<br />cerita dan foto berikutnya.</p></div>}</section>
+
+      <section id="sertifikat" className="journal-certificates journal-wrap journal-section"><ChapterTitle number="04" note="SERTIFIKAT">Hal-hal yang<br /><em>kupelajari.</em></ChapterTitle><div className="certificate-paper"><span className="paper-corner" aria-hidden="true" /><Daisy className="certificate-daisy" />{certificates.length ? certificates.map((item, index) => <Certificate item={item} index={index} key={item.id || index} />) : <p className="certificate-empty">Sertifikat dan dokumentasi pembelajaran<br />akan ditambahkan di sini.</p>}</div></section>
+
+      <section id="sapa" className="journal-contact journal-wrap journal-section"><div className="contact-garden"><GardenSprig className="contact-sprig" /><ChapterTitle number="05" note="SAPA">Kirim<br /><em>sapaan.</em></ChapterTitle></div><div className="contact-letter"><Daisy className="letter-seal" /><p>Untuk peluang kerja, kolaborasi,<br />atau sekadar menyapa.</p>{email && <a className="letter-email" href={email}>{data.email}<span aria-hidden="true">↗</span></a>}{whatsapp && <a className="journal-link" href={whatsapp} target="_blank" rel="noopener noreferrer">Sapa lewat WhatsApp <span aria-hidden="true">↗</span></a>}<span className="letter-signature">{data.shortName} ♡</span></div></section>
+    </main>
+    <footer className="journal-footer journal-wrap"><span>© {year} {data.name}</span><a href="#kenalan">Kembali ke atas ↑</a></footer>
+    <dialog className="journal-photo-modal" ref={dialog} onCancel={() => setSelectedPhoto(null)} onClose={() => setSelectedPhoto(null)} onClick={event => { if (event.target === event.currentTarget) setSelectedPhoto(null); }} aria-label={photo?.caption || 'Detail foto'}>{photo && <div><button type="button" className="photo-modal-close" onClick={() => setSelectedPhoto(null)}>Tutup ×</button><img src={photo.image} alt={photo.caption || 'Dokumentasi kegiatan'} /><div className="photo-modal-caption"><h2>{photo.caption}</h2>{photo.description && <p>{photo.description}</p>}</div></div>}</dialog>
   </div>;
 }
