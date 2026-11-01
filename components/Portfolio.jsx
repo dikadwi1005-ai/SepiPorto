@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import useProfile from './useProfile';
+import useGlassMotion from './useGlassMotion';
 import { sectionAtViewport } from '../lib/navigation.mjs';
 import { emailHref, whatsappHref } from '../lib/profile.mjs';
 
@@ -37,11 +38,23 @@ export default function Portfolio({ preview = false }) {
   const { data, replaceData } = useProfile({ livePreview: preview });
   const [activeSection, setActiveSection] = useState('utama');
   const [motion, setMotion] = useState(false);
+  const [motionEnabled, setMotionEnabled] = useState(true);
   const [year, setYear] = useState(2026);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const dialog = useRef(null);
   const scope = useRef(null);
   const navigationIntent = useRef(null);
+  useGlassMotion(scope, motionEnabled);
+
+  useEffect(() => {
+    try { setMotionEnabled(localStorage.getItem('sherlynda-motion') !== 'paused'); } catch { /* Motion remains optional without storage. */ }
+  }, []);
+  function toggleMotion() {
+    setMotionEnabled(previous => {
+      try { localStorage.setItem('sherlynda-motion', previous ? 'paused' : 'active'); } catch {}
+      return !previous;
+    });
+  }
 
   useEffect(() => { setYear(new Date().getFullYear()); if (location.hash) history.replaceState(null, '', location.pathname + location.search); }, []);
   useEffect(() => {
@@ -127,11 +140,12 @@ export default function Portfolio({ preview = false }) {
   const names = data.name.trim().split(/\s+/);
   const visibleGallery = gallery.map((item, index) => ({ ...item, sourceIndex: index })).filter(item => item.image);
 
-  return <div ref={scope} onClick={navigateSection} className={'folio' + (motion ? ' motion' : '')}>
+  return <div ref={scope} onClick={navigateSection} className={'folio' + (motion ? ' motion' : '') + (!motionEnabled ? ' motion-paused' : '')}>
+    <div className="folio-glass-scene" aria-hidden="true"><div className="folio-glass-depth"><i className="glass-cloud cloud-rose" /><i className="glass-cloud cloud-blush" /><i className="glass-cloud cloud-pearl" /><i className="glass-ribbon" /></div></div>
     <a className="folio-skip" href="#utama">Langsung ke konten</a>
     <header className="folio-header">
       <a className="folio-signature" href="#utama">{data.shortName}<span> / Portofolio</span></a>
-      <a className="folio-header-contact" href="#kontak">Hubungi saya <span aria-hidden="true">↗</span></a>
+      <div className="folio-header-actions"><button type="button" className="folio-motion-toggle" onClick={toggleMotion} aria-pressed={motionEnabled} aria-label={motionEnabled ? 'Jeda animasi' : 'Aktifkan animasi'}><span aria-hidden="true">{motionEnabled ? 'Ⅱ' : '▷'}</span><span>Gerakan</span></button><a className="folio-header-contact" href="#kontak">Hubungi saya <span aria-hidden="true">↗</span></a></div>
     </header>
 
     <aside className="folio-index">
@@ -150,11 +164,11 @@ export default function Portfolio({ preview = false }) {
       <section id="utama" className="folio-opening">
         <div className="folio-opening-meta"><span>Portofolio pribadi</span><span>Fresh graduate / {data.degree}</span></div>
         <div className="folio-name"><h1><span>{names[0]}</span>{names.length > 1 && <span>{names.slice(1).join(' ')}</span>}</h1></div>
-        <figure className="folio-portrait">
+        <figure className="folio-portrait" data-glass-tilt>
           {data.portrait
             ? <img src={data.portrait} alt={'Foto ' + data.name} fetchPriority="high" />
             : <div className="folio-portrait-empty"><span>{names[0][0]}</span><p>Foto profil akan ditambahkan.</p></div>}
-          <figcaption><span>{data.name}</span><span>01 / Profil</span></figcaption>
+          <figcaption><span>{data.name}</span><span>01 / Profil</span></figcaption><span className="folio-portrait-tag">{data.degree}</span>
         </figure>
         <div className="folio-introduction">
           <p>{data.intro}</p>
@@ -188,7 +202,7 @@ export default function Portfolio({ preview = false }) {
       <section id="galeri" className="folio-section folio-gallery">
         <div className="folio-gallery-heading folio-reveal"><SectionLabel number="04">Galeri</SectionLabel><h2>Di antara<br /><em>kegiatan.</em></h2><p>Dokumentasi dan cerita dari pengalaman yang saya jalani.</p></div>
         {visibleGallery.length ? <div className="folio-photo-grid">
-          {visibleGallery.map((item, index) => <figure className="folio-photo folio-reveal" key={item.id || item.sourceIndex}>
+          {visibleGallery.map((item, index) => <figure className="folio-photo folio-reveal" data-glass-tilt key={item.id || item.sourceIndex} style={{ '--reveal-delay': (index % 3) * 90 + 'ms' }}>
             <button className="folio-photo-open" onClick={() => setSelectedPhoto(item.sourceIndex)} aria-label={'Lihat foto: ' + (item.caption || 'Dokumentasi ' + (index + 1))}>
               <img src={item.image} alt={item.caption || 'Dokumentasi kegiatan'} loading="lazy" />
               <span aria-hidden="true">Lihat foto ↗</span>
@@ -224,3 +238,4 @@ export default function Portfolio({ preview = false }) {
     </dialog>
   </div>;
 }
+

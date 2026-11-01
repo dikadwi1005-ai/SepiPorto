@@ -1,5 +1,6 @@
 import './globals.css';
 import './editorial.css';
+import './glass.css';
 
 export const metadata = {
   metadataBase: new URL('https://sherlyndaps.my.id'),
@@ -12,3 +13,4 @@ export const viewport = { themeColor: '#fff9fc' };
 export default function RootLayout({ children }) {
   return <html lang="id"><body>{children}</body></html>;
 }
+
