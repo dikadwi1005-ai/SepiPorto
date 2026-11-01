@@ -30,5 +30,9 @@
       "caption": "Momen untuk dikenang"
     }
   ],
-  "certificates": []
+  "certificates": [],
+  "companyLogo": "",
+  "programLogo": "",
+  "showCompanyLogo": true,
+  "showProgramLogo": true
 }

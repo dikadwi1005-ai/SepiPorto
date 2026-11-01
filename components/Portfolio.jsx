@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import useProfile from './useProfile';
 import useGlassMotion from './useGlassMotion';
+import { EXPERIENCE_LOGOS, experienceLogo } from '../lib/experience-logos.mjs';
 import { Daisy, GardenSprig, Butterfly } from './FlowerArt';
 import { sectionAtViewport } from '../lib/navigation.mjs';
 import { emailHref, whatsappHref } from '../lib/profile.mjs';
@@ -11,6 +12,13 @@ const chapters = [['kenalan', 'Kenalan'], ['perjalanan', 'Perjalanan'], ['album'
 
 function ChapterTitle({ number, children, note }) {
   return <div className="journal-chapter-title"><span className="journal-index">{number} / {note}</span><h2>{children}</h2></div>;
+}
+
+function ExperienceLogos({ data }) {
+  const prefix = process.env.NEXT_PUBLIC_BASE_PATH || '';
+  const logos = EXPERIENCE_LOGOS.map(logo => ({ ...logo, src: experienceLogo(data, logo, prefix) })).filter(logo => logo.src);
+  if (!logos.length) return null;
+  return <div className="internship-branding" aria-label="Identitas tempat dan program magang">{logos.map(logo => <figure key={logo.key}><div className={'internship-logo' + (logo.key === 'programLogo' && !data.programLogo ? ' msib-default' : '')}><img src={logo.src} alt={logo.key === 'companyLogo' ? 'Logo ' + data.company : 'Logo Magang Merdeka — MSIB'} loading="lazy" /></div><figcaption>{logo.key === 'companyLogo' ? 'Tempat magang' : 'Magang Merdeka / MSIB'}</figcaption></figure>)}</div>;
 }
 
 function Certificate({ item, index }) {
@@ -88,7 +96,7 @@ export default function Portfolio({ preview = false }) {
         <div className="about-note"><span className="journal-index">01 / KENALAN</span><div><p>{data.bio}</p><dl><div><dt>Pendidikan</dt><dd>{data.degree}</dd></div><div><dt>Kampus</dt><dd>{data.university}</dd></div></dl></div><Daisy className="about-daisy" /></div>
       </section>
 
-      <section id="perjalanan" className="journal-journey journal-wrap journal-section"><ChapterTitle number="02" note="PERJALANAN">Catatan dari<br /><em>ruang belajar.</em></ChapterTitle><div className="journey-layout"><div className="journey-margin"><GardenSprig className="journey-sprig" mirror /><p>{data.headline?.split('\n').join(' / ')}</p></div><div className="journey-entries"><article className="journey-entry"><div className="entry-topline"><span>Pengalaman magang</span><span>{data.period || 'Kabupaten Malang'}</span></div><h3>{data.company}</h3><p className="entry-role">{data.role}</p><p className="entry-story">{data.experience}</p>{data.experiencePhoto && <figure className="journey-photo"><img src={data.experiencePhoto} alt="Dokumentasi magang" loading="lazy" /><figcaption>Sepotong cerita dari masa magang.</figcaption></figure>}</article>{data.organization.trim() && <article className="journey-entry organization-entry"><span className="journal-index">ORGANISASI</span><h3>{data.organization}</h3><p className="entry-story">{data.organizationDetail}</p></article>}</div></div></section>
+      <section id="perjalanan" className="journal-journey journal-wrap journal-section"><ChapterTitle number="02" note="PERJALANAN">Catatan dari<br /><em>ruang belajar.</em></ChapterTitle><div className="journey-layout"><div className="journey-margin"><GardenSprig className="journey-sprig" mirror /><p>{data.headline?.split('\n').join(' / ')}</p></div><div className="journey-entries"><article className="journey-entry"><ExperienceLogos data={data} /><div className="entry-topline"><span>Pengalaman magang</span><span>{data.period || 'Kabupaten Malang'}</span></div><h3>{data.company}</h3><p className="entry-role">{data.role}</p><p className="entry-story">{data.experience}</p>{data.experiencePhoto && <figure className="journey-photo"><img src={data.experiencePhoto} alt="Dokumentasi magang" loading="lazy" /><figcaption>Sepotong cerita dari masa magang.</figcaption></figure>}</article>{data.organization.trim() && <article className="journey-entry organization-entry"><span className="journal-index">ORGANISASI</span><h3>{data.organization}</h3><p className="entry-story">{data.organizationDetail}</p></article>}</div></div></section>
 
       <section id="album" className="journal-album journal-wrap journal-section"><div className="album-heading"><ChapterTitle number="03" note="ALBUM">Momen kecil,<br /><em>kenangan manis.</em></ChapterTitle><p>Dokumentasi kegiatan<br />dan cerita di baliknya.</p><Daisy className="album-daisy" /></div>{photos.length ? <div className="album-grid">{photos.map((item, index) => <figure key={item.id || item.index} className="album-photo" style={{ '--photo-angle': index % 2 ? '2deg' : '-2deg', '--photo-delay': index % 3 * -1.2 + 's' }}><button type="button" onClick={() => setSelectedPhoto(item.index)} aria-label={'Lihat foto: ' + (item.caption || 'Dokumentasi kegiatan')}><img src={item.image} alt={item.caption || 'Dokumentasi kegiatan'} loading="lazy" /><span aria-hidden="true">↗</span></button><figcaption><span className="album-number">{String(index + 1).padStart(2, '0')}</span><div><h3>{item.caption || 'Dokumentasi kegiatan'}</h3>{item.description && <p>{item.description}</p>}</div></figcaption></figure>)}</div> : <div className="journal-empty"><Daisy /><p>Album ini sedang menunggu<br />cerita dan foto berikutnya.</p></div>}</section>
 
