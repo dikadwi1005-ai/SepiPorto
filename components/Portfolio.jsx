@@ -3,81 +3,98 @@
 import { useEffect, useRef, useState } from 'react';
 import useProfile from './useProfile';
 import useGlassMotion from './useGlassMotion';
-import { sectionAtViewport } from '../lib/navigation.mjs';
 import { emailHref, whatsappHref } from '../lib/profile.mjs';
 
-const sections = [
-  ['utama', 'Profil'], ['tentang', 'Tentang'], ['pengalaman', 'Pengalaman'],
-  ['galeri', 'Galeri'], ['sertifikat', 'Sertifikat'], ['kontak', 'Kontak'],
+const rooms = [
+  { id: 'profil', label: 'Profil', note: 'Tentang Sherlynda', x: 49, y: 27 },
+  { id: 'pengalaman', label: 'Pengalaman', note: 'Magang & organisasi', x: 23, y: 48 },
+  { id: 'galeri', label: 'Galeri', note: 'Dokumentasi kegiatan', x: 73, y: 53 },
+  { id: 'sertifikat', label: 'Sertifikat', note: 'Arsip pembelajaran', x: 36, y: 76 },
+  { id: 'kontak', label: 'Kontak', note: 'Mulai percakapan', x: 78, y: 82 },
 ];
 
-function SectionLabel({ number, children }) {
-  return <p className="folio-kicker"><span>{number}</span>{children}</p>;
+function RoomIcon({ type }) {
+  const paths = {
+    profil: <><circle cx="12" cy="8" r="3.5" /><path d="M5 21v-2a7 7 0 0 1 14 0v2" /></>,
+    pengalaman: <><rect x="3" y="7" width="18" height="14" rx="2" /><path d="M8 7V4h8v3M3 12l9 4 9-4M12 13v5" /></>,
+    galeri: <><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="16" cy="9" r="2" /><path d="m3 17 5-6 6 7 3-3 4 4" /></>,
+    sertifikat: <><path d="M14 3H5v18h14V8zM14 3v5h5" /><path d="M8 11h3M8 15h8M8 18h5" /></>,
+    kontak: <><rect x="2" y="5" width="20" height="14" rx="2" /><path d="m2 6 10 8L22 6" /></>,
+  };
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[type]}</svg>;
 }
 
-function CertificateRow({ item, index }) {
-  return <article className="folio-certificate">
-    <span className="folio-row-number">{String(index + 1).padStart(2, '0')}</span>
-    {item.image && <a className="folio-certificate-image" href={item.image} target="_blank" rel="noopener noreferrer">
-      <img src={item.image} alt={item.title || 'Sertifikat'} loading="lazy" />
-    </a>}
-    <div className="folio-certificate-copy">
-      <h3>{item.title || 'Sertifikat'}</h3>
-      <p className="folio-meta">{[item.issuer, item.date].filter(Boolean).join(' / ')}</p>
-      {item.description && <p>{item.description}</p>}
+function WorldMap({ active, select, name }) {
+  const current = rooms.find(room => room.id === active);
+  return <aside className="world-map" aria-label="Peta portofolio">
+    <div className="map-heading"><span>PORTOFOLIO / JELAJAH</span><span className="map-coordinate">01—05</span></div>
+    <div className="map-title"><h2>Ruang<br /><span>{name}.</span></h2><p>Pilih ruang untuk<br />mengenal ceritaku.</p></div>
+    <div className="map-stage">
+      <div className="map-floor" aria-hidden="true"><i /><i /><i /><i /></div>
+      <svg className="map-routes" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M49 27 23 48 36 76 78 82 73 53 49 27M23 48 73 53 36 76" /><path className="route-flow" d="M49 27 23 48 36 76 78 82 73 53 49 27" /></svg>
+      {rooms.map((room, index) => <button key={room.id} type="button" className={'map-node' + (active === room.id ? ' selected' : '')}
+        style={{ '--node-x': room.x + '%', '--node-y': room.y + '%', '--float-delay': index * -.8 + 's' }}
+        aria-pressed={active === room.id} onClick={() => select(room.id)}>
+        <span className="node-platform"><RoomIcon type={room.id} /><span className="node-number">0{index + 1}</span></span>
+        <span className="node-label">{room.label}</span>
+      </button>)}
     </div>
-    <div className="folio-document-links">
-      {item.document && <a href={item.document} target="_blank" rel="noopener noreferrer">Buka PDF ↗</a>}
-      {item.image && <a href={item.image} target="_blank" rel="noopener noreferrer">Lihat gambar ↗</a>}
-      {item.credentialUrl && <a href={item.credentialUrl} target="_blank" rel="noopener noreferrer">Kredensial ↗</a>}
-    </div>
-  </article>;
+    <div className="map-caption" aria-live="polite"><span className="map-indicator" /><div><small>RUANG TERPILIH</small><strong>{current.label}</strong></div><span aria-hidden="true">↗</span></div>
+  </aside>;
+}
+
+function ProfileRoom({ data }) {
+  return <div className="room-profile">
+    <figure className="character-photo" data-glass-tilt>{data.portrait ? <img src={data.portrait} alt={'Foto ' + data.name} fetchPriority="high" /> : <div className="character-placeholder">{data.shortName?.[0]}</div>}<figcaption>{data.degree}</figcaption></figure>
+    <div className="character-intro"><span className="room-tag">Fresh graduate</span><p className="room-lead">{data.intro}</p><dl><div><dt>Pendidikan</dt><dd>{data.degree}</dd></div><div><dt>Universitas</dt><dd>{data.university}</dd></div></dl></div>
+    <div className="character-story"><h2>Tentang saya</h2><p>{data.bio}</p>{data.headline && <span className="profile-motto">{data.headline.split('\n').join(' / ')}</span>}</div>
+  </div>;
+}
+
+function ExperienceRoom({ data }) {
+  return <div className="room-experience"><div className="experience-period"><span>01 / MAGANG</span><span>{data.period || 'Kabupaten Malang'}</span></div><h2>{data.company}</h2><p className="experience-role">{data.role}</p><p className="room-body">{data.experience}</p>{data.experiencePhoto && <figure className="experience-photo"><img src={data.experiencePhoto} alt="Dokumentasi magang" loading="lazy" /><figcaption>{data.company}</figcaption></figure>}{data.organization.trim() && <section className="organization-story"><span className="room-eyebrow">02 / ORGANISASI</span><h2>{data.organization}</h2><p className="room-body">{data.organizationDetail}</p></section>}</div>;
+}
+
+function GalleryRoom({ items, open }) {
+  const photos = items.map((item, index) => ({ ...item, index })).filter(item => item.image);
+  return photos.length ? <div className="room-gallery">{photos.map((item, index) => <figure key={item.id || item.index} className="gallery-memory" style={{ '--entry-delay': Math.min(index, 5) * 70 + 'ms' }}><button type="button" onClick={() => open(item.index)} aria-label={'Lihat foto: ' + (item.caption || 'Dokumentasi')}><img src={item.image} alt={item.caption || 'Dokumentasi kegiatan'} loading="lazy" /><span aria-hidden="true">↗</span></button><figcaption><small>FRAME / {String(index + 1).padStart(2, '0')}</small><h2>{item.caption || 'Dokumentasi kegiatan'}</h2>{item.description && <p>{item.description}</p>}</figcaption></figure>)}</div> : <EmptyRoom type="galeri">Dokumentasi kegiatan belum ditambahkan.</EmptyRoom>;
+}
+
+function EmptyRoom({ type, children }) {
+  return <div className="room-empty"><RoomIcon type={type} /><p>{children}</p></div>;
+}
+
+function CertificateRoom({ items }) {
+  return items.length ? <div className="room-archive">{items.map((item, index) => <article key={item.id || index} className="archive-record"><span className="archive-index">{String(index + 1).padStart(2, '0')}</span>{item.image && <img src={item.image} alt={item.title || 'Sertifikat'} loading="lazy" />}<div><h2>{item.title || 'Sertifikat'}</h2><p className="archive-meta">{[item.issuer, item.date].filter(Boolean).join(' / ')}</p>{item.description && <p className="room-body">{item.description}</p>}<div className="archive-links">{item.document && <a href={item.document} target="_blank" rel="noopener noreferrer">Buka PDF ↗</a>}{item.image && <a href={item.image} target="_blank" rel="noopener noreferrer">Lihat gambar ↗</a>}{item.credentialUrl && <a href={item.credentialUrl} target="_blank" rel="noopener noreferrer">Kredensial ↗</a>}</div></div></article>)}</div> : <EmptyRoom type="sertifikat">Sertifikat belum ditambahkan.</EmptyRoom>;
+}
+
+function ContactRoom({ data }) {
+  const email = emailHref(data.email), whatsapp = whatsappHref(data.phone);
+  return <div className="room-contact"><div className="contact-emblem" aria-hidden="true"><RoomIcon type="kontak" /></div><h2>Mari berbincang.</h2><p>Untuk peluang kerja, kolaborasi,<br />atau percakapan baru.</p><div className="contact-destinations">{email && <a href={email}><span><small>EMAIL</small>{data.email}</span><span aria-hidden="true">↗</span></a>}{whatsapp && <a href={whatsapp} target="_blank" rel="noopener noreferrer"><span><small>WHATSAPP</small>{data.phone}</span><span aria-hidden="true">↗</span></a>}</div></div>;
 }
 
 export default function Portfolio({ preview = false }) {
   const { data, replaceData } = useProfile({ livePreview: preview });
-  const [activeSection, setActiveSection] = useState('utama');
-  const [motion, setMotion] = useState(false);
-  const [motionEnabled, setMotionEnabled] = useState(true);
-  const [year, setYear] = useState(2026);
+  const [active, setActive] = useState('profil');
   const [selectedPhoto, setSelectedPhoto] = useState(null);
-  const dialog = useRef(null);
-  const scope = useRef(null);
-  const navigationIntent = useRef(null);
-  useGlassMotion(scope, motionEnabled);
-
-  useEffect(() => {
-    try { setMotionEnabled(localStorage.getItem('sherlynda-motion') !== 'paused'); } catch { /* Motion remains optional without storage. */ }
-  }, []);
-  function toggleMotion() {
-    setMotionEnabled(previous => {
-      try { localStorage.setItem('sherlynda-motion', previous ? 'paused' : 'active'); } catch {}
-      return !previous;
-    });
-  }
+  const [year, setYear] = useState(2026);
+  const scope = useRef(null), detail = useRef(null), dialog = useRef(null);
+  useGlassMotion(scope, true);
+  const roomIndex = rooms.findIndex(room => room.id === active);
+  const room = rooms[roomIndex];
+  const gallery = data.gallery || [];
+  const photo = selectedPhoto === null ? null : gallery[selectedPhoto];
 
   useEffect(() => { setYear(new Date().getFullYear()); if (location.hash) history.replaceState(null, '', location.pathname + location.search); }, []);
   useEffect(() => {
     if (!preview) return;
-    function receive(event) {
-      if (event.source !== window.parent || event.origin !== location.origin || event.data?.type !== 'portfolio-preview') return;
-      replaceData(event.data.data);
-    }
+    const receive = event => {
+      if (event.source === window.parent && event.origin === location.origin && event.data?.type === 'portfolio-preview') replaceData(event.data.data);
+    };
     addEventListener('message', receive);
     window.parent.postMessage({ type: 'portfolio-ready' }, location.origin);
     return () => removeEventListener('message', receive);
   }, [preview, replaceData]);
-
-  useEffect(() => {
-    if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    setMotion(true);
-    const observer = new IntersectionObserver(entries => entries.forEach(entry => {
-      if (entry.isIntersecting) { entry.target.classList.add('seen'); observer.unobserve(entry.target); }
-    }), { threshold: .06 });
-    scope.current.querySelectorAll('.folio-reveal').forEach(element => observer.observe(element));
-    return () => observer.disconnect();
-  }, [data]);
-
   useEffect(() => {
     if (selectedPhoto === null) { if (dialog.current?.open) dialog.current.close(); return; }
     dialog.current?.showModal();
@@ -86,156 +103,25 @@ export default function Portfolio({ preview = false }) {
     return () => { document.body.style.overflow = overflow; };
   }, [selectedPhoto]);
 
-  const email = emailHref(data.email);
-  const whatsapp = whatsappHref(data.phone);
-  const gallery = data.gallery || [];
-  const certificates = data.certificates || [];
-  const photo = selectedPhoto === null ? null : gallery[selectedPhoto];
-  function navigateSection(event) {
-    const link = event.target.closest('a[href^="#"]');
-    if (!link || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    const target = document.getElementById(link.getAttribute('href').slice(1));
-    if (!target) return;
-    event.preventDefault();
-    navigationIntent.current = target.id;
-    setActiveSection(target.id);
-    target.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
-    if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
-    target.focus({ preventScroll: true });
+  function selectRoom(id) {
+    setActive(id);
+    if (scrollY > 100 || innerWidth < 900) detail.current?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
   }
-  useEffect(() => {
-    let frame;
-    const update = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        if (navigationIntent.current) return;
-        const positions = sections.map(([id]) => ({ id, top: document.getElementById(id)?.getBoundingClientRect().top ?? Infinity }));
-        setActiveSection(sectionAtViewport(positions, innerHeight));
-      });
-    };
-    const finish = () => { navigationIntent.current = null; };
-    const interrupt = () => { finish(); update(); };
-    const keyInterrupt = event => {
-      if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) interrupt();
-    };
-    update();
-    addEventListener('scroll', update, { passive: true });
-    addEventListener('resize', update);
-    addEventListener('scrollend', finish);
-    addEventListener('wheel', interrupt, { passive: true });
-    addEventListener('touchstart', interrupt, { passive: true });
-    addEventListener('keydown', keyInterrupt);
-    return () => {
-      cancelAnimationFrame(frame);
-      removeEventListener('scroll', update);
-      removeEventListener('resize', update);
-      removeEventListener('scrollend', finish);
-      removeEventListener('wheel', interrupt);
-      removeEventListener('touchstart', interrupt);
-      removeEventListener('keydown', keyInterrupt);
-    };
-  }, []);
 
-
-  const names = data.name.trim().split(/\s+/);
-  const visibleGallery = gallery.map((item, index) => ({ ...item, sourceIndex: index })).filter(item => item.image);
-
-  return <div ref={scope} onClick={navigateSection} className={'folio' + (motion ? ' motion' : '') + (!motionEnabled ? ' motion-paused' : '')}>
-    <div className="folio-glass-scene" aria-hidden="true"><div className="folio-glass-depth"><i className="glass-cloud cloud-rose" /><i className="glass-cloud cloud-blush" /><i className="glass-cloud cloud-pearl" /><i className="glass-ribbon" /></div></div>
-    <a className="folio-skip" href="#utama">Langsung ke konten</a>
-    <header className="folio-header">
-      <a className="folio-signature" href="#utama">{data.shortName}<span> / Portofolio</span></a>
-      <div className="folio-header-actions"><button type="button" className="folio-motion-toggle" onClick={toggleMotion} aria-pressed={motionEnabled} aria-label={motionEnabled ? 'Jeda animasi' : 'Aktifkan animasi'}><span aria-hidden="true">{motionEnabled ? 'Ⅱ' : '▷'}</span><span>Gerakan</span></button><a className="folio-header-contact" href="#kontak">Hubungi saya <span aria-hidden="true">↗</span></a></div>
-    </header>
-
-    <aside className="folio-index">
-      <span className="folio-index-label">Daftar isi</span>
-      <nav aria-label="Navigasi utama">
-        {sections.map(([id, label], index) => <a key={id} href={'#' + id}
-          aria-current={activeSection === id ? 'location' : undefined}>
-          <span className="folio-index-number">{String(index + 1).padStart(2, '0')}</span>
-          <span>{label}</span>
-        </a>)}
-      </nav>
-      <p className="folio-index-note">Pendidikan Sejarah<br />Catatan pengalaman<br />& dokumentasi.</p>
-    </aside>
-
-    <main className="folio-main">
-      <section id="utama" className="folio-opening">
-        <div className="folio-opening-meta"><span>Portofolio pribadi</span><span>Fresh graduate / {data.degree}</span></div>
-        <div className="folio-name"><h1><span>{names[0]}</span>{names.length > 1 && <span>{names.slice(1).join(' ')}</span>}</h1></div>
-        <figure className="folio-portrait" data-glass-tilt>
-          {data.portrait
-            ? <img src={data.portrait} alt={'Foto ' + data.name} fetchPriority="high" />
-            : <div className="folio-portrait-empty"><span>{names[0][0]}</span><p>Foto profil akan ditambahkan.</p></div>}
-          <figcaption><span>{data.name}</span><span>01 / Profil</span></figcaption><span className="folio-portrait-tag">{data.degree}</span>
-        </figure>
-        <div className="folio-introduction">
-          <p>{data.intro}</p>
-          <a className="folio-text-link" href="#pengalaman">Lihat pengalaman <span aria-hidden="true">↓</span></a>
-        </div>
-        {data.headline && <p className="folio-motto">{data.headline.split('\n').join(' / ')}</p>}
-      </section>
-
-      <section id="tentang" className="folio-about folio-section folio-reveal">
-        <div className="folio-side-heading"><SectionLabel number="02">Tentang</SectionLabel><h2>Catatan<br />singkat.</h2></div>
-        <div className="folio-about-body"><p className="folio-bio">{data.bio}</p>
-          <dl className="folio-education">
-            <div><dt>Pendidikan</dt><dd>{data.degree}</dd></div>
-            <div><dt>Universitas</dt><dd>{data.university}</dd></div>
-          </dl>
-        </div>
-      </section>
-
-      <section id="pengalaman" className="folio-section folio-experience">
-        <div className="folio-section-intro folio-reveal"><SectionLabel number="03">Pengalaman</SectionLabel><h2>Belajar di<br /><em>lapangan.</em></h2></div>
-        <article className="folio-experience-story folio-reveal">
-          <div className="folio-experience-meta"><span>Magang</span><span>{data.period || 'Kabupaten Malang'}</span></div>
-          <h3>{data.company}</h3>
-          <p className="folio-role">{data.role}</p>
-          <p className="folio-story">{data.experience}</p>
-          {data.experiencePhoto && <figure className="folio-field-photo"><img src={data.experiencePhoto} alt="Dokumentasi pengalaman magang" loading="lazy" /><figcaption>Dokumentasi magang / {data.company}</figcaption></figure>}
-        </article>
-        {data.organization.trim() && <article className="folio-organization folio-reveal"><SectionLabel number="—">Organisasi</SectionLabel><h3>{data.organization}</h3><p>{data.organizationDetail}</p></article>}
-      </section>
-
-      <section id="galeri" className="folio-section folio-gallery">
-        <div className="folio-gallery-heading folio-reveal"><SectionLabel number="04">Galeri</SectionLabel><h2>Di antara<br /><em>kegiatan.</em></h2><p>Dokumentasi dan cerita dari pengalaman yang saya jalani.</p></div>
-        {visibleGallery.length ? <div className="folio-photo-grid">
-          {visibleGallery.map((item, index) => <figure className="folio-photo folio-reveal" data-glass-tilt key={item.id || item.sourceIndex} style={{ '--reveal-delay': (index % 3) * 90 + 'ms' }}>
-            <button className="folio-photo-open" onClick={() => setSelectedPhoto(item.sourceIndex)} aria-label={'Lihat foto: ' + (item.caption || 'Dokumentasi ' + (index + 1))}>
-              <img src={item.image} alt={item.caption || 'Dokumentasi kegiatan'} loading="lazy" />
-              <span aria-hidden="true">Lihat foto ↗</span>
-            </button>
-            <figcaption><span className="folio-photo-number">{String(index + 1).padStart(2, '0')}</span><div><h3>{item.caption || 'Dokumentasi kegiatan'}</h3>{item.description && <p>{item.description}</p>}</div></figcaption>
-          </figure>)}
-        </div> : <p className="folio-empty">Dokumentasi kegiatan akan ditambahkan di sini.</p>}
-      </section>
-
-      <section id="sertifikat" className="folio-section folio-certificates">
-        <div className="folio-archive-heading folio-reveal"><div><SectionLabel number="05">Sertifikat</SectionLabel><h2>Arsip<br /><em>pembelajaran.</em></h2></div><p>Sertifikat, pelatihan, dan pencapaian.</p></div>
-        {certificates.length ? <div className="folio-certificate-list">{certificates.map((item, index) => <CertificateRow key={item.id || index} item={item} index={index} />)}</div>
-          : <p className="folio-empty">Sertifikat akan ditambahkan di sini.</p>}
-      </section>
-
-      <section id="kontak" className="folio-section folio-contact folio-reveal">
-        <SectionLabel number="06">Kontak</SectionLabel>
-        <h2>Mari<br /><em>berbincang.</em></h2>
-        <div className="folio-contact-details"><p>Untuk peluang kerja, kolaborasi,<br />atau percakapan baru.</p><div>
-          {email && <a className="folio-email" href={email}>{data.email}<span aria-hidden="true">↗</span></a>}
-          {whatsapp && <a className="folio-text-link" href={whatsapp} target="_blank" rel="noopener noreferrer">WhatsApp <span aria-hidden="true">↗</span></a>}
-        </div></div>
-      </section>
-      <footer className="folio-footer"><span>© {year} {data.name}</span><a href="#utama">Kembali ke atas ↑</a></footer>
-    </main>
-
-    <dialog className="folio-modal" ref={dialog} onCancel={() => setSelectedPhoto(null)} onClose={() => setSelectedPhoto(null)}
-      onClick={event => { if (event.target === event.currentTarget) setSelectedPhoto(null); }} aria-label={photo?.caption || 'Detail foto'}>
-      {photo && <div className="folio-modal-body"><button className="folio-modal-close" onClick={() => setSelectedPhoto(null)} aria-label="Tutup foto">Tutup ×</button>
-        <img src={photo.image} alt={photo.caption || 'Dokumentasi kegiatan'} />
-        <div><h3>{photo.caption}</h3>{photo.description && <p>{photo.description}</p>}</div>
-      </div>}
-    </dialog>
+  return <div ref={scope} className="portfolio-world">
+    <div className="world-atmosphere" aria-hidden="true"><i /><i /><div className="world-orbit" /></div>
+    <a href="#room-content" className="world-skip" onClick={event => { event.preventDefault(); detail.current?.focus(); }}>Langsung ke konten</a>
+    <header className="world-header"><button className="world-wordmark" type="button" onClick={() => selectRoom('profil')}><span className="wordmark-mark">s.</span><span>{data.shortName}<small>PORTOFOLIO</small></span></button><span className="world-header-note">Pendidikan · Pengalaman · Dokumentasi</span><button className="world-contact-button" type="button" onClick={() => selectRoom('kontak')}>Hubungi saya <span aria-hidden="true">↗</span></button></header>
+    <div className="world-layout"><WorldMap active={active} select={selectRoom} name={data.shortName} />
+      <main ref={detail} id="room-content" className="world-detail" tabIndex={-1} aria-labelledby="world-room-title">
+        <div className="room-window-bar"><span><i />{room.label}</span><div><button type="button" onClick={() => selectRoom(rooms[(roomIndex + rooms.length - 1) % rooms.length].id)} aria-label="Ruang sebelumnya">←</button><small>0{roomIndex + 1} / 05</small><button type="button" onClick={() => selectRoom(rooms[(roomIndex + 1) % rooms.length].id)} aria-label="Ruang berikutnya">→</button></div></div>
+        <div key={active} className="room-content"><div className="room-title"><span className="room-eyebrow">{room.note}</span><h1 id="world-room-title">{active === 'profil' ? data.name : room.label}<span>.</span></h1></div>
+          {active === 'profil' && <ProfileRoom data={data} />}{active === 'pengalaman' && <ExperienceRoom data={data} />}{active === 'galeri' && <GalleryRoom items={gallery} open={setSelectedPhoto} />}{active === 'sertifikat' && <CertificateRoom items={data.certificates || []} />}{active === 'kontak' && <ContactRoom data={data} />}
+        </div><div className="room-bottom"><span>{data.shortName} / {room.label}</span><span aria-hidden="true">↗</span></div>
+      </main>
+    </div>
+    <nav className="world-mobile-nav" aria-label="Pilih ruang">{rooms.map(room => <button type="button" key={room.id} aria-pressed={active === room.id} onClick={() => selectRoom(room.id)}><RoomIcon type={room.id} /><span>{room.label}</span></button>)}</nav>
+    <footer className="world-footer"><span>© {year} {data.name}</span><span>Portofolio pribadi</span></footer>
+    <dialog className="world-photo-modal" ref={dialog} onCancel={() => setSelectedPhoto(null)} onClose={() => setSelectedPhoto(null)} onClick={event => { if (event.target === event.currentTarget) setSelectedPhoto(null); }} aria-label={photo?.caption || 'Detail foto'}>{photo && <div><button className="photo-modal-close" type="button" onClick={() => setSelectedPhoto(null)}>Tutup ×</button><img src={photo.image} alt={photo.caption || 'Dokumentasi kegiatan'} /><div className="photo-modal-caption"><h2>{photo.caption}</h2>{photo.description && <p>{photo.description}</p>}</div></div>}</dialog>
   </div>;
 }
-

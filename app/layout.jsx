@@ -1,6 +1,5 @@
 import './globals.css';
-import './editorial.css';
-import './glass.css';
+import './world.css';
 
 export const metadata = {
   metadataBase: new URL('https://sherlyndaps.my.id'),
